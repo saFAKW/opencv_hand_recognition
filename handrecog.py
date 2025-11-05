@@ -6,9 +6,12 @@ import mediapipe as mp
 vid = cv2.VideoCapture(0) # access to internal webcam, 1,2,3 for external webcams
 vid.set(3,960) #sets the range of the window size
 
-#mediapipe paths (there are loads so this simplifies it)
+#mediapipe paths
 mphands = mp.solutions.hands
+
+#library 'mphands' pipelining 
 Hands = mphands.Hands()
+Hands = mphands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.7, min_tracking_confidence=0.6)
 
 #main loop
 while True:
