@@ -1,85 +1,100 @@
 # imports
 import cv2
 import mediapipe as mp
+import time
 
 # video capturing
-vid = cv2.VideoCapture(0) # access to internal webcam, 1,2,3 for external webcams
-vid.set(3,1280) #sets the range of the window size
+vid = cv2.VideoCapture(0)
+vid.set(3, 1280)
 
 # mediapipe paths
 mphands = mp.solutions.hands
 
 # library 'mediapipe/mphands' pipelining 
-Hands = mphands.Hands()
 Hands = mphands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.7, min_tracking_confidence=0.6)
 
 # library 'mediapipe/mpdraw' pipelining 
 mpdraw = mp.solutions.drawing_utils
 
-#lists
-finger_tips = []
-zero = [4,8,12,16,20]
-one = [4,12,16,20]
-two = [4,16,20]
-three = [4,20]
+# lists
+tipIds = [4, 8, 12, 16, 20]
+
+# variables
+pTime = 0
 
 # functions
 def set_up():
+    global pTime  # Need to declare pTime as global to modify it
+    
     ret, frame = vid.read()
+    
     # convert from BGR to RGB
-    RGBframe = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # mediapipe and cv work on different colour spectrums
+    RGBframe = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     result = Hands.process(RGBframe)
 
-    if result.multi_hand_landmarks: # branch for hand detection
-        for handLm in result.multi_hand_landmarks: # handLm is each hand seen by camera, max. 2
+    # Create a copy of frame for finger counting display
+    img = frame.copy()
+
+    if result.multi_hand_landmarks:
+        for handLm in result.multi_hand_landmarks:
             mpdraw.draw_landmarks(frame, handLm, mphands.HAND_CONNECTIONS,
-                                  mpdraw.DrawingSpec(color=(0, 0, 255), circle_radius=7, #blue
+                                  mpdraw.DrawingSpec(color=(0, 0, 255), circle_radius=7,
                                                      thickness=cv2.FILLED),
-                                  mpdraw.DrawingSpec(color=(0, 255, 0), thickness=7) #green lines
+                                  mpdraw.DrawingSpec(color=(0, 255, 0), thickness=7)
                                   )
+            
+            # Get landmark positions
+            lmList = []
             for id, lm in enumerate(handLm.landmark):
                 h, w, _ = frame.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
-                #print(id, cx, cy)
+                lmList.append([id, cx, cy])
 
-                #check for 1 on finger
-                if id == 12 or id == 16 or id == 20 or id == 4 or id == 8:
-                    barrier = (handLm.landmark[9].y)*h
-                    if cy > barrier: # finger down check
-                        cv2.circle(frame, (cx, cy), 6, (0, 225, 0), cv2.FILLED) #green
-                        finger_tips.append(id)
-                        print(finger_tips)
-                        if set(zero).issubset(set(finger_tips)):
-                            print("0")
-                            exit()
-                        elif set(one).issubset(set(finger_tips)):
-                            print("1")
-                        elif set(two).issubset(set(finger_tips)):
-                            print("2")
-                        elif set(three).issubset(set(finger_tips)):
-                            print("3")
-                        elif 4 in finger_tips:
-                            print("4")
-                        else:
-                            print("5")
-                finger_tips.clear()
-                    # cv2.line(frame, (cx, cy), (Tx, Ty), (255, 0, 0), 5 )
+            if len(lmList) != 0:
+                fingers = []
 
-    cv2.imshow("Hand Recognition", frame) # intialises window and default framerate
+                # thumb tracking (right hand assumed)
+                if lmList[tipIds[0]][1] > lmList[tipIds[0] - 1][1]:
+                    fingers.append(1)
+                else:
+                    fingers.append(0)
+
+                # 4 Fingers
+                for id in range(1, 5):
+                    if lmList[tipIds[id]][2] < lmList[tipIds[id] - 2][2]:
+                        fingers.append(1)
+                    else:
+                        fingers.append(0)
+
+                totalFingers = fingers.count(1)
+                print(totalFingers)
+
+                cv2.rectangle(img, (20, 225), (170, 425), (0, 255, 0), cv2.FILLED)
+                cv2.putText(img, str(totalFingers), (45, 375), cv2.FONT_HERSHEY_PLAIN,
+                            10, (255, 0, 0), 25)
+
+    # Calculate FPS
+    cTime = time.time()
+    fps = 1 / (cTime - pTime)
+    pTime = cTime
+
+    cv2.putText(img, f'FPS: {int(fps)}', (400, 70), cv2.FONT_HERSHEY_PLAIN,
+                3, (255, 0, 0), 3)
+
+    cv2.imshow("Hand Recognition", frame)
 
     if cv2.waitKey(1) == 27:  # ESC to quit
-        exit()
+        cleanup()
 
-#check no. of fingers function
-def check_fingers():
-    pass
-
-#exit function
-def exit():
+# exit function
+def cleanup():
     vid.release()
-    cv2.destroyAllWindows() # closes program
+    cv2.destroyAllWindows()
+    exit()
 
 # main loop
-while True:
-    set_up()
-
+try:
+    while True:
+        set_up()
+except KeyboardInterrupt:
+    cleanup()
