@@ -73,7 +73,7 @@ while True:
     if results.multi_face_landmarks:
         mesh_coordinatess = landmarksDetection(frame, results, True)
 
-        eyes_ratio = blinkRatio(frame, mesh_coordinatess, RIGHT_EYE, LEFT_EYE)
+        eyes_ratio = blinkRatio(frame, mesh_coordinatess, right_eye, left_eye)
 
         cv2.putText(frame, "Please blink your eyes",(int(frame_height/2), 100), FONT, 1, (0, 255, 0), 2)
 
@@ -83,7 +83,7 @@ while True:
         else:
             if counter > 4:
                 total_blinks +=1
-                COcounterUNTER =0
+                counter =0
 
         cv2.rectangle(frame, (20, 120), (290, 160), (0,0,0), -1)
         cv2.putText(frame, f'Total Blinks: {total_blinks}',(30, 150), FONT, 1, (0, 255, 0), 2)
