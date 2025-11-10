@@ -77,6 +77,7 @@ while True:
 
         cv2.putText(frame, "Please blink your eyes",(int(frame_height/2), 100), FONT, 1, (0, 255, 0), 2)
 
+        #
         if eyes_ratio > 3:
             counter +=1
 
